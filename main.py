@@ -8,6 +8,8 @@ from accelerate import Accelerator
 
 start_time = time.time()
 
+# Took code from: https://huggingface.co/docs/transformers/model_doc/grounding-dino
+
 model_id = "IDEA-Research/grounding-dino-tiny"
 device = Accelerator().device
 
