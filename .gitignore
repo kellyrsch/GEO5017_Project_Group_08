@@ -1,7 +1,11 @@
-data/*
+data/benchmarks/*
+data/generated-datasets/*
+data/manual_labelling_subset/*
+data/UrbanWaste-images-10k-right/*
 *.pyc
 .vscode/*
 __pycache__/*
 .env
 runs/*
 *.pt
+*.zip
