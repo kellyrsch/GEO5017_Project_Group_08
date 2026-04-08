@@ -1,4 +1,5 @@
 data/benchmarks/*
+data/old/*
 data/generated-datasets/*
 data/manual_labelling_subset/*
 data/UrbanWaste-images-10k-right/*

@@ -1,67 +1,115 @@
-import requests
-import time
+from dataclasses import dataclass
+from enum import Enum
+import os
 
-import torch
-from PIL import Image, ImageDraw, ImageFont
-from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
-from accelerate import Accelerator
+from build_dataset import build_dataset
+from p_at_100 import benchmark_model
+from train_yolo26_seg import train_model
 
-start_time = time.time()
+@dataclass
+class YearSplit:
+    train_years: list[int]
+    valid_years: list[int]
+    test_years: list[int]
 
-# Took code from: https://huggingface.co/docs/transformers/model_doc/grounding-dino
+    percent_background_samples_for_train_valid: float
+    
+    def to_dict(self):
+        tr = {year: "train" for year in self.train_years}
+        va = {year: "valid" for year in self.valid_years}
+        te = {year: "test" for year in self.test_years}
+        return {**tr, **va, **te}
 
-model_id = "IDEA-Research/grounding-dino-tiny"
-device = Accelerator().device
+@dataclass
+class PercentSplit:
+    train_percent: float
+    valid_percent: float
+    test_percent: float
 
-processor = AutoProcessor.from_pretrained(model_id)
-model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
+    percent_background_samples_for_train_valid: float
 
-#image_url = "http://images.cocodataset.org/val2017/000000039769.jpg"
-image_url = "GEO5017-Project-UrbanWaste/UrbanWaste-images-10k-right/year_2016/TMX7316010203-000188/pano_0000_002298_heading220.50_pitch-0.22_right90_square_fov90.0_640x640.jpg"
-#image = Image.open(requests.get(image_url, stream=True).raw)
-image = Image.open(image_url)
-# Check for cats and remote controls
-text_labels = [["a bicycle", "a building", "a trash bag", "a car", "litter", "paper"]]
+    def to_tuple(self):
+        return self.train_percent, self.valid_percent, self.test_percent
 
-inputs = processor(images=image, text=text_labels, return_tensors="pt").to(model.device)
-with torch.no_grad():
-    outputs = model(**inputs)
+@dataclass
+class DataParameters:
+    split_config: YearSplit | PercentSplit
+    augmentation_ratios: dict[int, float]
+    max_augments_per_image: int
 
-results = processor.post_process_grounded_object_detection(
-    outputs,
-    inputs.input_ids,
-    threshold=0.4,
-    text_threshold=0.4,
-    target_sizes=[image.size[::-1]]
-)
+class ModelSizes(Enum):
+    NANO = "nano"
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+    EXTRA_LARGE = "extra_large"
 
-result = results[0]
-for box, score, labels in zip(result["boxes"], result["scores"], result["labels"]):
-    box = [round(x, 2) for x in box.tolist()]
-    draw = ImageDraw.Draw(image)
+@dataclass
+class ModelParameters:
+    model_size: ModelSizes
+    epochs: int
+    batch_size: int # Reduce if you hit Out of Memory (OOM) errors on GPU
+    patience: int # Early Stopping: If accuracy doesn't improve for x epochs, stop training early to prevent overfitting
 
-    # Optional: nicer font (falls back if not found)
-    try:
-        font = ImageFont.truetype("arial.ttf", 20)
-    except:
-        font = ImageFont.load_default()
+def run_full_e2e_process(name: str,
+                         model_config: ModelParameters | None = None,
+                         input_yml_path: str | None = None,
+                         training_config: DataParameters | None = None,
+                         trained_model_weights_path: str | None = None):
+    assert input_yml_path or training_config, "Must specify either input_yml_path or training_config."
+    assert model_config or trained_model_weights_path, "Must specify either model_config or trained_model_weights_path."
+    model_input = build_dataset(
+        name=name,
+        background_samples_percent=training_config.split_config.percent_background_samples_for_train_valid,
+        year_train_split=training_config.split_config.to_dict() if isinstance(training_config.split_config, YearSplit) else None,
+        train_valid_test_split=training_config.split_config.to_tuple() if isinstance(training_config.split_config, PercentSplit) else None,
+        augmentation_ratios=training_config.augmentation_ratios,
+        max_augments_per_image=training_config.max_augments_per_image
+    ) if input_yml_path is None else input_yml_path
 
-    for box, score, label in zip(result["boxes"], result["scores"], result["labels"]):
-        box = box.tolist()
+    if not trained_model_weights_path:
+        model_directory = train_model(
+            name=name,
+            model_size=model_config.model_size.value,
+            yaml_path=model_input,
+            epochs=model_config.epochs,
+            patience=model_config.patience,
+            batch_size=model_config.batch_size
+        ) 
+        trained_model_weights_path = os.path.join(model_directory, "weights", "best.pt")
+        print(f"Training complete. Best model weights saved at: {trained_model_weights_path}")
+    
+    benchmark_model(name, trained_model_weights_path)
 
-        # Draw rectangle
-        draw.rectangle(box, outline="red", width=3)
+if __name__ == "__main__":
 
-        # Prepare label text
-        text = f"{label} ({round(score.item(), 2)})"
+    # Example usage:
+    data_params = DataParameters(
+        split_config=YearSplit(
+            train_years=[2016,2017,2018,2019],
+            valid_years=[2020,2021],
+            test_years=[2022,2023],
+            percent_background_samples_for_train_valid=0.8
+        ),
+        augmentation_ratios={
+            0: 8,  # bulky waste
+            1: 4,  # cardboard
+            2: 1.5,  # garbage bag (we want to reduce this class)
+            3: 3,  # litter
+            4: 12,  # other
+        },
+        max_augments_per_image=5
+    )
 
-        # Position text slightly above the box
-        text_position = (box[0], box[1] - 20)
+    model_params = ModelParameters(
+        model_size=ModelSizes.NANO,
+        epochs=100,
+        batch_size=16,
+        patience=20
+    )
 
-        # Draw text
-        draw.text(text_position, text, fill="red", font=font)
-
-    print(f"Detected {labels} with confidence {round(score.item(), 3)} at location {box}")
-    image.show()
-
-print("Runtime: ", time.time() - start_time)
+    run_full_e2e_process(
+        name="uw-basic-seg-nano-v1",
+        model_config=model_params,
+        training_config=data_params
+    )

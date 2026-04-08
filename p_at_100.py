@@ -165,15 +165,13 @@ def benchmark_model(model_name: str, model_path: str):
     test_images_dir = os.path.join(MAIN_TEST_SET, "images")
     test_labels_dir = os.path.join(MAIN_TEST_SET, "labels")
     out_path = os.path.join(BENCHMARKS_FP, model_name)
-    #top_images = find_top_waste_images(model_path, test_images_dir, out_path, top_x=100)
-    with open(os.path.join(out_path, "top_waste_images.txt")) as f:
-        top_images = []
-        for line in f:
-            path, conf = line.strip().split("\t")
-            top_images.append((path, float(conf)))
+    if os.path.exists(os.path.join(out_path, "top_waste_images.txt")):
+        with open(os.path.join(out_path, "top_waste_images.txt")) as f:
+            top_images = []
+            for line in f:
+                path, conf = line.strip().split("\t")
+                top_images.append((path, float(conf)))
+    else:
+        top_images = find_top_waste_images(model_path, test_images_dir, out_path, top_x=100)
     result = evaluate_top_results(top_images, test_labels_dir)
     run_yolo_benchmark(model_path, test_images_dir, out_path)
-
-if __name__ == "__main__":
-    model_weights = r"runs\segment\yolo26_seg\run_small_v4\weights\best.pt"
-    benchmark_model("v4-small", model_weights)

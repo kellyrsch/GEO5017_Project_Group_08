@@ -1,4 +1,6 @@
-YAML_PATH = r"data\generated-datasets\uw-basic-aug-v4\data.yml"
+import os
+
+
 AVAILABLE_MODELS = {
     "nano": "yolo26n-seg.pt",
     "small": "yolo26s-seg.pt",
@@ -7,26 +9,28 @@ AVAILABLE_MODELS = {
     "extra_large": "yolo26x-seg.pt"
 }
 
-SELECTED_MODEL = "small"
-
-if __name__ == "__main__":
-    print(f"Downloading model {SELECTED_MODEL}...")
+def train_model(name: str, model_size: str, yaml_path: str, epochs: int, patience: int, batch_size: int):
+    selected_model = AVAILABLE_MODELS.get(model_size)
+    if not selected_model:
+        print(f"Error: Model size '{model_size}' is not valid. Please choose from: {list(AVAILABLE_MODELS.keys())}")
+        return
+    print(f"Downloading model {selected_model}...")
     from ultralytics import YOLO
-    model = YOLO(AVAILABLE_MODELS[SELECTED_MODEL])
+    model = YOLO(selected_model)
 
-    print(f"\nStarting training on data: {YAML_PATH}")
+    print(f"\nStarting training on data: {yaml_path}")
     try:
         results = model.train(
-            data=YAML_PATH,
-            epochs=150,             # we will most likely stop due to patience way earlier anway
+            data=yaml_path,
+            epochs=epochs,             # we will most likely stop due to patience way earlier anway
             imgsz=640,
-            batch=16,               # Reduce if you hit Out of Memory (OOM) errors on GPU
+            batch=batch_size,               # Reduce if you hit Out of Memory (OOM) errors on GPU
             device='0', # '0' for GPU, or 'cpu' if no GPU is available
             project='yolo26_seg',
-            name=f'run_{SELECTED_MODEL}_v4',
+            name=name,
             task='segment',
 
-            patience=20,            # Early Stopping: If accuracy doesn't improve for 15 epochs, stop training early to prevent overfitting
+            patience=patience,            # Early Stopping: If accuracy doesn't improve for 15 epochs, stop training early to prevent overfitting
             save_period=50,         # Save a backup checkpoint of the model every 10 epochs
             mask_ratio=4,
 
@@ -48,3 +52,6 @@ if __name__ == "__main__":
         
     except Exception as e:
         print(f"\nAn error occurred during training: {e}")
+
+    model_output_dir = r"runs\segment\yolo26_seg"
+    return os.path.join(model_output_dir, name)

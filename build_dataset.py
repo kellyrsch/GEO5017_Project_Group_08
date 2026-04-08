@@ -270,27 +270,5 @@ def build_dataset(name: str,
 
     create_metadata(output_path, split_summary, basic_copies_created, copy_paste_copies_created)
     create_data_yml(output_path, len(augmentation_ratios.keys()) > 0)
-
-if __name__ == "__main__":
-    build_dataset(
-        "uw-basic-aug-v4",
-        background_samples_percent=0.66,
-        year_train_split={
-            2016: "train",
-            2017: "train",
-            2018: "train",
-            2019: "train",
-            2020: "valid",
-            2021: "valid",
-            2022: "test",
-            2023: "test"
-        },
-        augmentation_ratios={
-            0: 8,  # bulky waste
-            1: 4,  # cardboard
-            2: 1.5,  # garbage bag (we want to reduce this class)
-            3: 3,  # litter
-            4: 12,  # other
-        },
-        max_augments_per_image=5
-    )
+    
+    return os.path.join(output_path, "data.yml")
