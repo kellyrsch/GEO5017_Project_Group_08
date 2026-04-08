@@ -221,9 +221,9 @@ def create_metadata(output_path: str, split_summary: dict, basic_copies_created:
         f.write(output)
 
 def create_data_yml(output_path: str, has_augmentation: bool):
-    data_yml_content = f"""train: {os.path.join(output_path, 'train_augmented' if has_augmentation else 'train', 'images')}
-val: {os.path.join(output_path, 'valid', 'images')}
-test: {os.path.join(output_path, 'test', 'images')}
+    data_yml_content = f"""train: ../{'train_augmented' if has_augmentation else 'train'}/images
+val: ../valid/images
+test: ../test/images
 
 nc: 5
 names: ['bulky waste', 'cardboard', 'garbage bag', 'litter', 'other']
@@ -273,7 +273,7 @@ def build_dataset(name: str,
 
 if __name__ == "__main__":
     build_dataset(
-        "test",
+        "uw-basic-aug-v4",
         background_samples_percent=0.66,
         year_train_split={
             2016: "train",

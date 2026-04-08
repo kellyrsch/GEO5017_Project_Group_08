@@ -1,4 +1,4 @@
-YAML_PATH = r"data\urban-waste.v5i.yolo26-basic-aug-v3\data.yaml"
+YAML_PATH = r"data\generated-datasets\uw-basic-aug-v4\data.yml"
 AVAILABLE_MODELS = {
     "nano": "yolo26n-seg.pt",
     "small": "yolo26s-seg.pt",
@@ -7,7 +7,7 @@ AVAILABLE_MODELS = {
     "extra_large": "yolo26x-seg.pt"
 }
 
-SELECTED_MODEL = "large"
+SELECTED_MODEL = "small"
 
 if __name__ == "__main__":
     print(f"Downloading model {SELECTED_MODEL}...")
@@ -18,15 +18,15 @@ if __name__ == "__main__":
     try:
         results = model.train(
             data=YAML_PATH,
-            epochs=200,             # we will most likely stop due to patience way earlier anway
+            epochs=150,             # we will most likely stop due to patience way earlier anway
             imgsz=640,
             batch=16,               # Reduce if you hit Out of Memory (OOM) errors on GPU
             device='0', # '0' for GPU, or 'cpu' if no GPU is available
             project='yolo26_seg',
-            name=f'run_{SELECTED_MODEL}_v3',
+            name=f'run_{SELECTED_MODEL}_v4',
             task='segment',
 
-            patience=25,            # Early Stopping: If accuracy doesn't improve for 15 epochs, stop training early to prevent overfitting
+            patience=20,            # Early Stopping: If accuracy doesn't improve for 15 epochs, stop training early to prevent overfitting
             save_period=50,         # Save a backup checkpoint of the model every 10 epochs
             mask_ratio=4,
 
