@@ -5,7 +5,7 @@ import os
 IMAGES_FOLDER_FP = "data/UrbanWaste-images-10k-right"
 
 # add a typing alias
-ImageMetadata = tuple[str, int, float, float]
+ImageMetadata = tuple[str, int, float, float, int, int]
 
 def get_image_fps() -> list[ImageMetadata]:
     """
@@ -20,18 +20,28 @@ def get_image_fps() -> list[ImageMetadata]:
             subfolder_fps = [os.path.join(IMAGES_FOLDER_FP, folder, img) for img in os.listdir(os.path.join(IMAGES_FOLDER_FP, folder))]
             subfolder_fps = [fp for fp in subfolder_fps if not '.' in fp]
             image_fps = [os.path.join(subfolder_fp, fp) for subfolder_fp in subfolder_fps for fp in os.listdir(subfolder_fp) if fp.endswith(".jpg")]
-            # Extract heading and pitch from each image file path
+            # Extract heading and pitch as well as the 4 and 6 digit IDs from each image file path
             image_fps = [
                 (
                     fp,
                     int(year),
                     float(os.path.basename(fp).split('_')[3].lstrip('heading')),
-                    float(os.path.basename(fp).split('_')[4].lstrip('pitch'))
+                    float(os.path.basename(fp).split('_')[4].lstrip('pitch')),
+                    int(os.path.basename(fp).split('_')[1]),
+                    int(os.path.basename(fp).split('_')[2])
                 )
                 for fp in image_fps
             ]
             res.extend(image_fps)
     print(f"Total images loaded: {len(res)}")
+    return res
+
+def get_manually_labelled_filenames():
+    manual_label_folder_path = "data/manual_labelling_subset"
+    res = []
+    for fp in os.listdir(manual_label_folder_path):
+        if fp.endswith(".jpg"):
+            res.append(fp)
     return res
 
 DinoData = tuple[str, float, int] # (file path, max confidence, number of objects detected)

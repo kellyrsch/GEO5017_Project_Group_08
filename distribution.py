@@ -4,160 +4,168 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 
-labels_folder = "C:/Users/Snow/Downloads/urban-waste.v5i.yolo26/urban-waste.v5i.yolo26/train/labels"
+labels_folder = r"data\urban-waste.v5i.yolo26-testing\train_augmented\labels"
 
-total_objects_per_label = Counter()
-objects_per_image = []
+def get_label_distribution(labels_folder: str):
+    total_objects_per_label = Counter()
+    objects_per_image = []
+    object_counts_per_image = []
 
-images_with_same_label = 0
-images_with_mixed_labels = 0
+    images_with_same_label = 0
+    images_with_mixed_labels = 0
 
-co_occurrence = defaultdict(int)
+    co_occurrence = defaultdict(int)
 
-label_sizes = defaultdict(list)
-label_centers_x = defaultdict(list)
-label_centers_y = defaultdict(list)
-
-for file in os.listdir(labels_folder):
-    if not file.endswith(".txt"):
-        continue
-
-    with open(os.path.join(labels_folder, file), "r") as f:
-        lines = [line.strip() for line in f if line.strip()]
-
-    labels = []
-
-    for line in lines:
-        parts = line.split()
-        label = int(parts[0])
-        coords = list(map(float, parts[1:]))
-
-        labels.append(label)
-
-        # polygon → bbox
-        xs = coords[0::2]
-        ys = coords[1::2]
-
-        if len(xs) == 0:
+    label_sizes = defaultdict(list)
+    label_centers_x = defaultdict(list)
+    label_centers_y = defaultdict(list)
+    for file in os.listdir(labels_folder):
+        if not file.endswith(".txt"):
             continue
 
-        xmin, xmax = min(xs), max(xs)
-        ymin, ymax = min(ys), max(ys)
+        with open(os.path.join(labels_folder, file), "r") as f:
+            lines = [line.strip() for line in f if line.strip()]
 
-        width = xmax - xmin
-        height = ymax - ymin
-        area = width * height
+        labels = []
 
-        cx = (xmin + xmax) / 2
-        cy = (ymin + ymax) / 2
+        for line in lines:
+            parts = line.split()
+            label = int(parts[0])
+            coords = list(map(float, parts[1:]))
 
-        label_sizes[label].append(area)
-        label_centers_x[label].append(cx)
-        label_centers_y[label].append(cy)
+            labels.append(label)
 
-    #per-image stats
-    num_objects = len(labels)
-    objects_per_image.append(num_objects)
+            # polygon → bbox
+            xs = coords[0::2]
+            ys = coords[1::2]
 
-    unique_labels = set(labels)
+            if len(xs) == 0:
+                continue
 
-    if len(unique_labels) == 1 and num_objects > 1:
-        images_with_same_label += 1
-    elif len(unique_labels) > 1:
-        images_with_mixed_labels += 1
+            xmin, xmax = min(xs), max(xs)
+            ymin, ymax = min(ys), max(ys)
 
-    #co-occurrence
-    unique_list = list(unique_labels)
-    for i in range(len(unique_list)):
-        for j in range(i + 1, len(unique_list)):
-            pair = tuple(sorted((unique_list[i], unique_list[j])))
-            co_occurrence[pair] += 1
+            width = xmax - xmin
+            height = ymax - ymin
+            area = width * height
 
-    total_objects_per_label.update(labels)
+            cx = (xmin + xmax) / 2
+            cy = (ymin + ymax) / 2
 
-print("\nBasic Stats:")
-print(f"Total images: {len(objects_per_image)}")
-print(f"Avg objects/image: {np.mean(objects_per_image):.2f}")
-print(f"Min objects/image: {np.min(objects_per_image)}")
-print(f"Max objects/image: {np.max(objects_per_image)}")
+            label_sizes[label].append(area)
+            label_centers_x[label].append(cx)
+            label_centers_y[label].append(cy)
 
-print("\nLabel Counts:")
-for label, count in sorted(total_objects_per_label.items()):
-    print(f"Label {label}: {count}")
+        #per-image stats
+        num_objects = len(labels)
+        objects_per_image.append(num_objects)
+        object_counts_per_image.append(Counter(labels))
 
-print("\nImage Types:")
-print(f"Single-object images: {sum(1 for x in objects_per_image if x == 1)}")
-print(f"Multi-object images: {sum(1 for x in objects_per_image if x > 1)}")
-print(f"Same-label images: {images_with_same_label}")
-print(f"Mixed-label images: {images_with_mixed_labels}")
+        unique_labels = set(labels)
 
-print("\nSize Stats:")
-for label in sorted(label_sizes.keys()):
-    sizes = label_sizes[label]
-    print(f"Label {label}: mean={np.mean(sizes):.4f}, min={np.min(sizes):.4f}, max={np.max(sizes):.4f}")
+        if len(unique_labels) == 1 and num_objects > 1:
+            images_with_same_label += 1
+        elif len(unique_labels) > 1:
+            images_with_mixed_labels += 1
 
-print("\nPosition Stats:")
-for label in sorted(label_centers_x.keys()):
-    print(f"Label {label}: mean_x={np.mean(label_centers_x[label]):.3f}, mean_y={np.mean(label_centers_y[label]):.3f}")
+        #co-occurrence
+        unique_list = list(unique_labels)
+        for i in range(len(unique_list)):
+            for j in range(i + 1, len(unique_list)):
+                pair = tuple(sorted((unique_list[i], unique_list[j])))
+                co_occurrence[pair] += 1
 
-print("\nTop Co-occurrences:")
-sorted_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)
-for pair, count in sorted_pairs[:10]:
-    print(f"{pair}: {count}")
+        total_objects_per_label.update(labels)
+    return total_objects_per_label, objects_per_image, object_counts_per_image, images_with_same_label, images_with_mixed_labels, label_sizes, label_centers_x, label_centers_y, co_occurrence
 
-#objects per image
-plt.figure()
-plt.hist(objects_per_image, bins=20)
-plt.title("Objects per Image")
-plt.xlabel("Objects per image")
-plt.ylabel("Frequency")
-plt.show()
+if __name__ == "__main__":
+    total_objects_per_label, objects_per_image, object_counts_per_image, images_with_same_label, images_with_mixed_labels, label_sizes, label_centers_x, label_centers_y, co_occurrence = get_label_distribution(labels_folder)
 
-#label distribution
-plt.figure()
-labels = list(total_objects_per_label.keys())
-counts = list(total_objects_per_label.values())
-plt.bar(labels, counts)
-plt.title("Label Distribution")
-plt.xlabel("Label")
-plt.ylabel("Count")
-plt.show()
+    output = "\nBasic Stats:\n"
+    output += f"Total images: {len(objects_per_image)}\n"
+    output += f"Avg objects/image: {np.mean(objects_per_image):.2f}\n"
+    output += f"Min objects/image: {np.min(objects_per_image)}\n"
+    output += f"Max objects/image: {np.max(objects_per_image)}\n"
 
-#object size distribution
-all_sizes = [s for sizes in label_sizes.values() for s in sizes]
-plt.figure()
-plt.hist(all_sizes, bins=30)
-plt.title("Object Size Distribution")
-plt.xlabel("BBox Area")
-plt.ylabel("Frequency")
-plt.show()
+    output += "\nLabel Counts:\n"
+    for label, count in sorted(total_objects_per_label.items()):
+        output += f"Label {label}: {count}\n"
 
-#size per label
-plt.figure()
-data = [label_sizes[l] for l in sorted(label_sizes.keys())]
-plt.boxplot(data)
-plt.title("Object Size per Label")
-plt.xlabel("Label index")
-plt.ylabel("Area")
-plt.show()
+    output += "\nImage Types:\n"
+    output += f"Single-object images: {sum(1 for x in objects_per_image if x == 1)}\n"
+    output += f"Multi-object images: {sum(1 for x in objects_per_image if x > 1)}\n"
+    output += f"Same-label images: {images_with_same_label}\n"
+    output += f"Mixed-label images: {images_with_mixed_labels}\n"
 
-#co-occurrence
-top_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)[:10]
-pairs = [str(p[0]) for p in top_pairs]
-counts = [p[1] for p in top_pairs]
+    output += "\nSize Stats:\n"
+    for label in sorted(label_sizes.keys()):
+        sizes = label_sizes[label]
+        output += f"Label {label}: mean={np.mean(sizes):.4f}, min={np.min(sizes):.4f}, max={np.max(sizes):.4f}\n"
 
-plt.figure()
-plt.bar(pairs, counts)
-plt.title("Top Co-occurring Labels")
-plt.xlabel("Label pairs")
-plt.ylabel("Count")
-plt.xticks(rotation=45)
-plt.show()
+    output += "\nPosition Stats:\n"
+    for label in sorted(label_centers_x.keys()):
+        output += f"Label {label}: mean_x={np.mean(label_centers_x[label]):.3f}, mean_y={np.mean(label_centers_y[label]):.3f}\n"
 
-# with open("label_distribution.csv", "w", newline="") as f:
-#     writer = csv.writer(f)
-#     writer.writerow(["label", "count"])
-#     for label, count in total_objects_per_label.items():
-#         writer.writerow([label, count])
-#
-# print("\nSaved: label_distribution.csv")
+    output += "\nTop Co-occurrences:\n"
+    sorted_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)
+    for pair, count in sorted_pairs[:10]:
+        output += f"{pair}: {count}\n"
+    
+    print(output)
+
+    # #objects per image
+    # plt.figure()
+    # plt.hist(objects_per_image, bins=20)
+    # plt.title("Objects per Image")
+    # plt.xlabel("Objects per image")
+    # plt.ylabel("Frequency")
+    # plt.show()
+
+    # #label distribution
+    # plt.figure()
+    # labels = list(total_objects_per_label.keys())
+    # counts = list(total_objects_per_label.values())
+    # plt.bar(labels, counts)
+    # plt.title("Label Distribution")
+    # plt.xlabel("Label")
+    # plt.ylabel("Count")
+    # plt.show()
+
+    # #object size distribution
+    # all_sizes = [s for sizes in label_sizes.values() for s in sizes]
+    # plt.figure()
+    # plt.hist(all_sizes, bins=30)
+    # plt.title("Object Size Distribution")
+    # plt.xlabel("BBox Area")
+    # plt.ylabel("Frequency")
+    # plt.show()
+
+    # #size per label
+    # plt.figure()
+    # data = [label_sizes[l] for l in sorted(label_sizes.keys())]
+    # plt.boxplot(data)
+    # plt.title("Object Size per Label")
+    # plt.xlabel("Label index")
+    # plt.ylabel("Area")
+    # plt.show()
+
+    # #co-occurrence
+    # top_pairs = sorted(co_occurrence.items(), key=lambda x: x[1], reverse=True)[:10]
+    # pairs = [str(p[0]) for p in top_pairs]
+    # counts = [p[1] for p in top_pairs]
+
+    # plt.figure()
+    # plt.bar(pairs, counts)
+    # plt.title("Top Co-occurring Labels")
+    # plt.xlabel("Label pairs")
+    # plt.ylabel("Count")
+    # plt.xticks(rotation=45)
+    # plt.show()
+
+    # with open("label_distribution.csv", "w", newline="") as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(["label", "count"])
+    #     for label, count in total_objects_per_label.items():
+    #         writer.writerow([label, count])
+    #
+    # print("\nSaved: label_distribution.csv")
