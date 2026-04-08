@@ -8,10 +8,10 @@ from transformers import AutoProcessor, AutoModelForZeroShotObjectDetection
 
 from data import get_image_fps
 
-OUTPUT_CSV = "grounding_dino_scores.csv"
+OUTPUT_CSV = "grounding_dino_scores_2.csv"
 
 # Grounding DINO requires categories to be lowercase and separated by periods
-TEXT_PROMPT = "litter . garbage bag . cardboard box . bulky waste . trash . debris . plastic . paper"
+TEXT_PROMPT = "cardboard box . mattress . sofa . furniture . large wooden pallet . bulky waste . technical appliance"
 BOX_THRESHOLD = 0.25
 TEXT_THRESHOLD = 0.25
 
@@ -34,7 +34,7 @@ model_id = "IDEA-Research/grounding-dino-base"
 processor = AutoProcessor.from_pretrained(model_id)
 model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
 
-all_files = [fp[0] for year, fps in get_image_fps().items() for fp in fps] # for now we only care about the file paths
+all_files = [fp[0] for fp in get_image_fps()] # for now we only care about the file paths
 
 # Filter out the files we've already processed
 remaining_files = [f for f in all_files if f not in processed_files]
