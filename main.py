@@ -85,4 +85,5 @@ if __name__ == "__main__":
 
     benchmark_model(model_name="nano", model_path=r"models\nano.pt")
     # benchmark_model(model_name="small", model_path=r"models\small.pt")
+    # benchmark_model(model_name="large", model_path=r"models\nano.pt")
     # benchmark_model(model_name="x-large", model_path=r"models\x-large.pt")
