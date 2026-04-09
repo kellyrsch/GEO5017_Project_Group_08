@@ -1,0 +1,12 @@
+matplotlib==3.10.8
+numpy==2.4.4
+opencv_python==4.13.0.92
+pandas==3.0.2
+Pillow==12.2.0
+protobuf==7.34.1
+python-dotenv==1.2.2
+skimage==0.0
+torch==2.11.0+cu126
+tqdm==4.67.3
+transformers==5.4.0
+ultralytics==8.4.33
