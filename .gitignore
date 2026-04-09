@@ -8,5 +8,4 @@ data/UrbanWaste-images-10k-right/*
 __pycache__/*
 .env
 runs/*
-*.pt
 *.zip
