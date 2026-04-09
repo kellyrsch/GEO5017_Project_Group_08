@@ -83,33 +83,6 @@ def run_full_e2e_process(name: str,
 
 if __name__ == "__main__":
 
-    # Example usage:
-    data_params = DataParameters(
-        split_config=YearSplit(
-            train_years=[2016,2017,2018,2019],
-            valid_years=[2020,2021],
-            test_years=[2022,2023],
-            percent_background_samples_for_train_valid=0.8
-        ),
-        augmentation_ratios={
-            0: 8,  # bulky waste
-            1: 4,  # cardboard
-            2: 1.5,  # garbage bag (we want to reduce this class)
-            3: 3,  # litter
-            4: 12,  # other
-        },
-        max_augments_per_image=5
-    )
-
-    model_params = ModelParameters(
-        model_size=ModelSizes.NANO,
-        epochs=100,
-        batch_size=16,
-        patience=20
-    )
-
-    run_full_e2e_process(
-        name="uw-basic-seg-nano-v1",
-        model_config=model_params,
-        training_config=data_params
-    )
+    benchmark_model(model_name="nano", model_path=r"models\nano.pt")
+    # benchmark_model(model_name="small", model_path=r"models\small.pt")
+    # benchmark_model(model_name="x-large", model_path=r"models\x-large.pt")

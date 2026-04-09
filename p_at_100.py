@@ -5,7 +5,7 @@ from pathlib import Path
 from ultralytics import YOLO
 
 BENCHMARKS_FP = r"data\benchmarks\P@100"
-MAIN_TEST_SET = r"data\generated-datasets\uw-basic-aug-v4\test"
+MAIN_TEST_SET = r"data\final_test_set"
 
 def find_top_waste_images(model_path, test_dir, output_dir, top_x=10):
     """
@@ -137,7 +137,7 @@ def run_yolo_benchmark(model_path, test_dir, output_dir):
         split='test',
         batch=16,
         imgsz=640,
-        plots=False
+        plots=True
     )
 
     results_str = "\n--- Benchmark Results ---\n"
@@ -174,4 +174,4 @@ def benchmark_model(model_name: str, model_path: str):
     else:
         top_images = find_top_waste_images(model_path, test_images_dir, out_path, top_x=100)
     result = evaluate_top_results(top_images, test_labels_dir)
-    run_yolo_benchmark(model_path, test_images_dir, out_path)
+    #run_yolo_benchmark(model_path, test_images_dir, out_path)
